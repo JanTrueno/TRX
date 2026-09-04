@@ -66,8 +66,13 @@ static void M_ExitUnsupportedGraphics(void)
 #endif
 
     char *message = String_Format(
+#if TRX_GLES
+        "TRX needs OpenGL ES 3.2 to draw the game, and the graphics driver "
+        "on this computer does not offer it.\n"
+#else
         "TRX needs OpenGL 3.3 to draw the game, and the graphics driver on "
         "this computer does not offer it.\n"
+#endif
         "\n"
         "Graphics driver: %s\n"
         "\n"
@@ -85,10 +90,17 @@ static void M_CreateGLContext(void)
     if (TRX_GL_Context_GetWindowHandle() != nullptr) {
         return; // GL context persists across mod switches
     }
+#if TRX_GLES
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+    SDL_GL_SetAttribute(
+        SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#else
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
     SDL_GL_SetAttribute(
         SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+#endif
     if (!TRX_GL_Context_Attach(m_Window)) {
         M_ExitUnsupportedGraphics();
     }

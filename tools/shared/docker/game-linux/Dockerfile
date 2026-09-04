@@ -91,6 +91,7 @@ RUN sed -i '/^Libs.private:/d' /ext/lib/pkgconfig/rubberband.pc \
 
 # libav
 FROM base AS libav
+ARG TARGETARCH
 RUN apt-get install -y \
     nasm \
     gcc \
@@ -103,9 +104,13 @@ RUN git clone \
     https://github.com/FFmpeg/FFmpeg
 RUN cd FFmpeg && git checkout 066432ebcf
 COPY ./tools/ffmpeg_flags.txt /tmp/ffmpeg_flags.txt
+# TARGETARCH is "amd64" or "arm64", set automatically by `docker build
+# --platform` / buildx; FFmpeg's own --arch spelling differs ("x86"/"aarch64").
 RUN cd FFmpeg \
+    && FFMPEG_ARCH=x86 \
+    && if [ "$TARGETARCH" = "arm64" ]; then FFMPEG_ARCH=aarch64; fi \
     && ./configure \
-        --arch=x86 \
+        --arch=$FFMPEG_ARCH \
         --prefix=/ext/ \
         --enable-static \
         --disable-shared \
@@ -189,15 +194,20 @@ COPY tools/shared/docker/lua.pc /ext/lib/pkgconfig/lua.pc
 
 # TRX
 FROM base
+ARG TARGETARCH
 
 # set the build dir - actual files are mounted with a Docker volume
 RUN mkdir /app
 WORKDIR /app
 
 # package dependencies
+# libgles2-mesa-dev is only actually used by the arm64/-Dgles=true build
+# (see src/meson.build); it's installed either way to keep this Dockerfile
+# shared between the amd64 and arm64 images.
 RUN apt-get install -y \
     zlib1g-dev \
     libgl1-mesa-dev \
+    libgles2-mesa-dev \
     g++
 
 # tooling dependencies
@@ -230,7 +240,9 @@ COPY --from=glew /ext/ /ext/
 ENV PYTHONPATH=/app/tools/
 ENV CCACHE_BASEDIR=/app/
 ENV CCACHE_COMPILERCHECK=content
-ENV CCACHE_DIR=/app/.cache/ccache/linux
+# Arch-suffixed so the amd64 and arm64 images (same Dockerfile, built with
+# different --platform) never share (and corrupt) one ccache directory.
+ENV CCACHE_DIR=/app/.cache/ccache/linux-${TARGETARCH}
 ENV CC="clang-20"
 ENV CXX="clang++-20"
 ENTRYPOINT ["/app/tools/shared/docker/game-linux/entrypoint.sh"]

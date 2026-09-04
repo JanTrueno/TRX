@@ -11,7 +11,7 @@
 #include <trx/gl/utils.h>
 #include <trx/gl/vertex_array.h>
 
-#include <GL/glew.h>
+#include <trx/gl/gl_compat.h>
 
 static int32_t M_ClampSamples(const int32_t samples)
 {

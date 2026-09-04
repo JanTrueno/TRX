@@ -5,11 +5,12 @@
 #include <trx/core/strings.h>
 #include <trx/game/shell.h>
 #include <trx/game/viewport.h>
+#include <trx/gl/gles_ext.h>
 #include <trx/gl/renderer.h>
 #include <trx/gl/screenshot.h>
 #include <trx/gl/utils.h>
 
-#include <GL/glew.h>
+#include <trx/gl/gl_compat.h>
 #include <SDL2/SDL_video.h>
 #include <string.h>
 
@@ -106,6 +107,11 @@ bool TRX_GL_Context_Attach(void *window_handle)
             "Can't activate OpenGL context: %s", SDL_GetError());
     }
 
+#if TRX_GLES
+    if (!TRX_GLES_LoadExtensions()) {
+        Shell_ExitSystemFmt("Can't load required OpenGL ES extensions");
+    }
+#else
     const GLenum err = glewInit();
     if (err != GLEW_OK) {
         if (err != 4) {
@@ -115,6 +121,7 @@ bool TRX_GL_Context_Attach(void *window_handle)
         // https://github.com/nigels-com/glew/issues/417
         LOG_WARNING("GLEW failed to init: %d", err);
     }
+#endif
 
     LOG_INFO("OpenGL vendor string:   %s", glGetString(GL_VENDOR));
     LOG_INFO("OpenGL renderer string: %s", glGetString(GL_RENDERER));
@@ -152,6 +159,13 @@ bool TRX_GL_Context_Attach(void *window_handle)
 char *TRX_GL_Context_DescribeDriver(void *const window_handle)
 {
     SDL_GL_ResetAttributes();
+#if TRX_GLES
+    // SDL_GL_ResetAttributes() drops back to a desktop-profile default, which
+    // would fail outright on a GLES-only device and defeat the point of this
+    // probe.
+    SDL_GL_SetAttribute(
+        SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+#endif
     SDL_GLContext context = SDL_GL_CreateContext(window_handle);
     if (context == nullptr) {
         LOG_ERROR("Can't create fallback OpenGL context: %s", SDL_GetError());

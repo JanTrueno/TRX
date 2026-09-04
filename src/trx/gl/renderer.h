@@ -3,7 +3,7 @@
 #include <trx/gl/config.h>
 #include <trx/gl/texture.h>
 
-#include <GL/glew.h>
+#include <trx/gl/gl_compat.h>
 #include <stdint.h>
 
 typedef struct TRX_GL_Renderer {

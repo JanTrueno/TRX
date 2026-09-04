@@ -38,6 +38,16 @@ jobs:
       zip: true
     secrets: inherit
 
+  package_linux_arm64:
+    name: Build Linux (arm64, GLES)
+    if: vars.RELEASE_ENABLE == 'true'
+    uses: ./.github/workflows/job_build.yml
+    with:
+      platform: linux-arm64
+      target: release
+      zip: true
+    secrets: inherit
+
   package_win:
     name: Build Windows
     if: vars.RELEASE_ENABLE == 'true'
@@ -86,6 +96,7 @@ jobs:
     name: Create a GitHub release
     needs:
       - package_linux
+      - package_linux_arm64
       - package_win
       - package_win_te
       - package_win_installer

@@ -5,7 +5,7 @@
 #include <trx/game/output/shaders/generic.h>
 #include <trx/gl/utils.h>
 
-#include <GL/glew.h>
+#include <trx/gl/gl_compat.h>
 #include <stddef.h>
 #include <string.h>
 
@@ -276,8 +276,12 @@ void Output_Quad_Upload(
         TRX_GL_CheckError();
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         TRX_GL_CheckError();
+        // The internal format is made to match the upload format (rather
+        // than a plain GL_RGBA) so a GL_BGRA surface stays legal under GLES:
+        // GLES's BGRA extension requires the two to match exactly, where
+        // desktop GL tolerates the mismatch and swizzles for free either way.
         glTexImage2D(
-            GL_TEXTURE_2D, 0, GL_RGBA, normalized_desc.width,
+            GL_TEXTURE_2D, 0, normalized_desc.tex_format, normalized_desc.width,
             normalized_desc.height, 0, normalized_desc.tex_format,
             normalized_desc.tex_type, data);
         TRX_GL_CheckError();

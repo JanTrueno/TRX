@@ -150,13 +150,19 @@ static char *M_Preprocess(const char *content, GLenum type)
 {
     ASSERT(content != nullptr);
 
-    const char *version_ogl33c = "#version 330 core\n";
+#if TRX_GLES
+    const char *const version_line = "#version 320 es\n"
+                                      "precision highp float;\n"
+                                      "precision highp int;\n";
+#else
+    const char *const version_line = "#version 330 core\n";
+#endif
     const char *define_vertex = "#define VERTEX\n";
     const char *define_fragment = "#define FRAGMENT\n";
 
     size_t bufsize = strlen(content) + 1;
 
-    bufsize += strlen(version_ogl33c);
+    bufsize += strlen(version_line);
 
     if (type == GL_VERTEX_SHADER) {
         bufsize += strlen(define_vertex);
@@ -165,7 +171,7 @@ static char *M_Preprocess(const char *content, GLenum type)
     }
 
     char *processed_content = Memory_Alloc(bufsize);
-    strcpy(processed_content, version_ogl33c);
+    strcpy(processed_content, version_line);
 
     if (type == GL_VERTEX_SHADER) {
         strcat(processed_content, define_vertex);

@@ -49,9 +49,14 @@ _docker_run tag *args:
 
 image-win force="1": (_docker_build "tools/shared/docker/game-win/Dockerfile" "rrdash/trx-win" force)
 image-linux force="1": (_docker_build "tools/shared/docker/game-linux/Dockerfile" "rrdash/trx-linux" force)
+# Same Dockerfile as image-linux; it's arch-aware (see TARGETARCH in
+# tools/shared/docker/game-linux/Dockerfile). Only actually produces an arm64
+# image when run on an arm64 host/runner - there's no QEMU/buildx trick here.
+image-linux-arm64 force="1": (_docker_build "tools/shared/docker/game-linux/Dockerfile" "rrdash/trx-linux-arm64" force)
 image-win-installer force="1": (_docker_build "tools/shared/docker/installer/Dockerfile" "rrdash/trx-installer" force)
 
 push-image-linux: (image-linux "0") (_docker_push "rrdash/trx-linux")
+push-image-linux-arm64: (image-linux-arm64 "0") (_docker_push "rrdash/trx-linux-arm64")
 push-image-win: (image-win "0") (_docker_push "rrdash/trx-win")
 
 download-assets tr_version='all':
@@ -79,6 +84,7 @@ lint:
     prek -a
 
 trx-build-linux target='debug': (image-linux "0") (_docker_run "rrdash/trx-linux" "build" "--target" target)
+trx-build-linux-arm64 target='debug': (image-linux-arm64 "0") (_docker_run "rrdash/trx-linux-arm64" "build" "--target" target)
 trx-build-win target='debug': (image-win "0") (_docker_run "rrdash/trx-win" "build" "--target" target)
 
 trx-build-win-installer target='release' *args: \
@@ -88,6 +94,7 @@ trx-build-win-installer target='release' *args: \
     (_docker_run "rrdash/trx-installer")
 
 trx-package-linux target='debug' *args: (trx-build-linux target) (_docker_run "rrdash/trx-linux" "package" args)
+trx-package-linux-arm64 target='debug' *args: (trx-build-linux-arm64 target) (_docker_run "rrdash/trx-linux-arm64" "package" args)
 trx-package-win target='debug' *args: (trx-build-win target) (_docker_run "rrdash/trx-win" "package" args)
 trx-package-win-te artifact_path output *args:
     python3 tools/lint/gen/te_symlinks

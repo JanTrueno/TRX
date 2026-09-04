@@ -52,8 +52,15 @@ class PackageOptions(BaseOptions):
 
     @property
     def release_zip_files(self) -> list[tuple[Path, str]]:
-        if self.platform == "linux":
-            return [(self.build_root / "TRX", "TRX")]
+        if self.platform in ("linux", "linux-arm64"):
+            # SDL2 is linked dynamically on Linux (see dep_sdl2 in
+            # src/meson.build); ship it next to the binary rather than
+            # relying on the target system having a matching one installed.
+            # TRX is linked with -rpath $ORIGIN so it's found there.
+            return [
+                (self.build_root / "TRX", "TRX"),
+                (Path("/ext/lib/libSDL2-2.0.so.0"), "libSDL2-2.0.so.0"),
+            ]
 
         elif self.platform == "win":
             return [(self.build_root / "TRX.exe", "TRX.exe")]
@@ -87,11 +94,13 @@ class BuildOptions(BaseOptions):
                 "--cross",
                 "/app/tools/shared/docker/game-win/meson_linux_mingw32.txt",
             ]
+        elif self.platform == "linux-arm64":
+            return ["-Dgles=true"]
         return []
 
     @property
     def compressable_exes(self) -> list[Path]:
-        if self.platform == "linux":
+        if self.platform in ("linux", "linux-arm64"):
             return [self.build_root / f"TRX"]
         elif self.platform == "win":
             return [self.build_root / f"TRX.exe"]

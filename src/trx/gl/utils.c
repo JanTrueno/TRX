@@ -1,6 +1,6 @@
 #include <trx/gl/utils.h>
 
-#include <GL/glew.h>
+#include <trx/gl/gl_compat.h>
 
 const char *TRX_GL_GetErrorString(GLenum err)
 {

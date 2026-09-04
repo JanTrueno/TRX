@@ -14,6 +14,7 @@ fs = import('fs')
 
 staticdeps = get_option('staticdeps')
 trx_version = get_option('trx_version')
+gles = get_option('gles')
 # Always dynamically link on macOS
 if host_machine.system() == 'darwin'
   staticdeps = false
@@ -158,6 +159,7 @@ common_build_opts = [
   '-DPCRE2_STATIC',
   '-DPCRE2_CODE_UNIT_WIDTH=8',
   '-DDEBUG=' + (get_option('buildtype') == 'debug' ? '1' : '0'),
+  '-DTRX_GLES=' + (gles ? '1' : '0'),
 ]
 
 # Without this, the mingw headers route printf and scanf to the MSVCRT ones,
@@ -196,8 +198,10 @@ dep_avcodec = dependency('libavcodec', static: staticdeps)
 dep_avfilter = dependency('libavfilter', static: staticdeps)
 dep_avformat = dependency('libavformat', static: staticdeps)
 dep_avutil = dependency('libavutil', static: staticdeps)
-dep_sdl2 = dependency('SDL2', static: staticdeps)
-dep_glew = dependency('glew', static: staticdeps)
+# SDL2 is always linked dynamically on Linux, regardless of staticdeps: the
+# arm64/GLES target ships against the distro's own SDL2, and a static SDL2
+# has a habit of dragging in a mismatched X11/Wayland stack on that platform.
+dep_sdl2 = dependency('SDL2', static: host_machine.system() == 'linux' ? false : staticdeps)
 dep_pcre2 = dependency('libpcre2-8', static: staticdeps)
 dep_backtrace = c_compiler.find_library('backtrace', static: true, required: false)
 dep_swscale = dependency('libswscale', static: staticdeps)
@@ -213,8 +217,15 @@ endif
 
 if host_machine.system() == 'windows'
   dep_opengl = c_compiler.find_library('opengl32')
+  dep_glew = dependency('glew', static: staticdeps)
+elif gles
+  # No GLEW under GLES: libGLESv2 exposes its (fixed, versioned) API directly,
+  # and the desktop extension-loading dance GLEW does doesn't apply.
+  dep_opengl = dependency('glesv2', static: staticdeps)
+  dep_glew = null_dep
 else
   dep_opengl = dependency('GL')
+  dep_glew = dependency('glew', static: staticdeps)
 endif
 
 dependencies = [
@@ -950,6 +961,10 @@ common_sources = [
   'trx/version.c',
 ]
 
+if gles
+  common_sources += ['trx/gl/gles_ext.c']
+endif
+
 
 if dep_backtrace.found() and host_machine.system() == 'linux'
   common_sources += ['trx/core/log_linux.c']
@@ -966,6 +981,11 @@ endif
 link_args = []
 if host_machine.system() == 'windows'
   link_args += ['-static']
+elif host_machine.system() == 'linux'
+  # SDL2 is dynamic on Linux (see dep_sdl2 above); look for it next to the
+  # binary first, so a copy shipped alongside TRX is found without the user
+  # having to set LD_LIBRARY_PATH.
+  link_args += ['-Wl,-rpath,$ORIGIN']
 endif
 
 

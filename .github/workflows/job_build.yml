@@ -23,7 +23,9 @@ on:
 jobs:
   build:
     name: Build release assets
-    runs-on: ubuntu-latest
+    # linux-arm64 needs a real arm64 host to build/run its Docker image on
+    # (see justfile: image-linux-arm64 has no QEMU/buildx cross step).
+    runs-on: ${{ inputs.platform == 'linux-arm64' && 'ubuntu-22.04-arm' || 'ubuntu-latest' }}
     outputs:
       trx_asset: ${{ steps.vars.outputs.trx_asset }}
 
@@ -50,7 +52,7 @@ jobs:
         run: just download-assets
 
       - name: Restore ccache
-        if: ${{ inputs.platform == 'linux' || inputs.platform == 'win' }}
+        if: ${{ inputs.platform == 'linux' || inputs.platform == 'linux-arm64' || inputs.platform == 'win' }}
         uses: actions/cache@v4
         with:
           path: .cache/ccache

@@ -14,7 +14,7 @@
 #include <trx/gl/utils.h>
 #include <trx/gl/vertex_array.h>
 
-#include <GL/glew.h>
+#include <trx/gl/gl_compat.h>
 #include <SDL2/SDL_video.h>
 #include <stdint.h>
 

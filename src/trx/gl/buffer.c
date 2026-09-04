@@ -53,7 +53,24 @@ void *TRX_GL_Buffer_Map(TRX_GL_BUFFER *buf, GLenum access)
 {
     ASSERT(buf != nullptr);
     ASSERT(buf->initialized);
+#if TRX_GLES
+    // glMapBuffer doesn't exist in GLES; glMapBufferRange covers the whole
+    // buffer instead, and wants its access mode as a bitfield rather than
+    // GL_READ_ONLY/GL_WRITE_ONLY/GL_READ_WRITE.
+    GLint size = 0;
+    glGetBufferParameteriv(buf->target, GL_BUFFER_SIZE, &size);
+    GLbitfield range_access = 0;
+    if (access == GL_READ_ONLY) {
+        range_access = GL_MAP_READ_BIT;
+    } else if (access == GL_WRITE_ONLY) {
+        range_access = GL_MAP_WRITE_BIT;
+    } else {
+        range_access = GL_MAP_READ_BIT | GL_MAP_WRITE_BIT;
+    }
+    void *ret = glMapBufferRange(buf->target, 0, size, range_access);
+#else
     void *ret = glMapBuffer(buf->target, access);
+#endif
     TRX_GL_CheckError();
     return ret;
 }
