@@ -85,7 +85,11 @@ jobs:
           SDL_VIDEODRIVER: dummy
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1
+          # SDL2 is linked dynamically now (see dep_sdl2 in src/meson.build);
+          # the binary built inside Docker needs it on the bare runner too,
+          # since this step runs it straight from build/trx/linux/ rather
+          # than from a packaged zip with the .so bundled alongside it.
+          sudo apt-get install -y libgl1 libsdl2-2.0-0
           just lua-api-check
 
       - name: Upload artifacts (combined)

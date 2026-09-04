@@ -221,7 +221,15 @@ if host_machine.system() == 'windows'
 elif gles
   # No GLEW under GLES: libGLESv2 exposes its (fixed, versioned) API directly,
   # and the desktop extension-loading dance GLEW does doesn't apply.
-  dep_opengl = dependency('glesv2', static: staticdeps)
+  #
+  # dependency('glesv2') only checks pkg-config, and PKG_CONFIG_LIBDIR above
+  # deliberately points away from the system pkgconfig dir (so the other,
+  # hand-built deps in /ext/ don't get shadowed by system packages) - which
+  # is exactly where the apt-installed libgles2-mesa-dev puts glesv2.pc.
+  # find_library() searches the compiler's normal library paths instead, so
+  # it isn't affected by that override. A static libGLESv2 isn't a thing
+  # Mesa ships either way, so this doesn't follow staticdeps.
+  dep_opengl = c_compiler.find_library('GLESv2', static: false)
   dep_glew = null_dep
 else
   dep_opengl = dependency('GL')
