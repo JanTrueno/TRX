@@ -29,6 +29,11 @@ static const char *const m_UniformBlocks[] = {
     "Globals", "Matrices", "Lights", "LightSource", "FogBulbs", nullptr,
 };
 
+#if !TRX_GLES
+// glGetActiveUniformName has no GLES equivalent (GLES's uniform introspection
+// stops at glGetActiveUniformsiv, with no way to recover a name from a UBO
+// member index), so this stays desktop-only. It's already permanently
+// disabled below regardless of platform.
 static void M_DebugUBO(const GLuint program_id, const GLuint block_idx)
 {
     // Prints memory layout of the specific UBO in the GPU
@@ -72,6 +77,7 @@ static void M_DebugUBO(const GLuint program_id, const GLuint block_idx)
     Memory_Free(uniform_indices);
     Memory_Free(block_name);
 }
+#endif
 
 OUTPUT_SHADER *Output_Shader_Create(const char *const path)
 {

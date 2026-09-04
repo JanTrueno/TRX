@@ -120,6 +120,35 @@
     }
     #define glEnable TRX_GLCompat_Enable
 
+    // glVertexAttribI1ui doesn't exist in GLES: there is no "current value"
+    // fallback for an integer-typed attribute at all (only the float
+    // glVertexAttrib*f family has one), which is what every call site here
+    // actually relies on - the attribute array is left disabled and this
+    // sets the constant value the shader reads instead. Fake the same
+    // "constant for the whole draw, however many vertices" behavior with a
+    // real one-element buffer and a per-instance (not per-vertex) divisor:
+    // with divisor > 0, the instance index - not the vertex index - selects
+    // which buffer element is read, and non-instanced draws always run as
+    // instance 0. The caller's own glDisableVertexAttribArray(index) right
+    // after its draw calls (already present, unconditionally) tears this
+    // back down.
+    static inline void TRX_GLCompat_VertexAttribI1ui(GLuint index, GLuint value)
+    {
+        static GLuint buffer = 0;
+        if (buffer == 0) {
+            glGenBuffers(1, &buffer);
+        }
+        GLint prev_buffer = 0;
+        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &prev_buffer);
+        glBindBuffer(GL_ARRAY_BUFFER, buffer);
+        glBufferData(GL_ARRAY_BUFFER, sizeof(value), &value, GL_STREAM_DRAW);
+        glEnableVertexAttribArray(index);
+        glVertexAttribIPointer(index, 1, GL_UNSIGNED_INT, 0, nullptr);
+        glVertexAttribDivisor(index, 1);
+        glBindBuffer(GL_ARRAY_BUFFER, (GLuint)prev_buffer);
+    }
+    #define glVertexAttribI1ui TRX_GLCompat_VertexAttribI1ui
+
     // glDrawElementsBaseVertex has no core GLES entry point. It's resolved at
     // runtime from the EXT/OES draw_elements_base_vertex extension by
     // TRX_GLES_LoadExtensions(); see gles_ext.h.
